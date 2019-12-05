@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Class Project</title>
+<style>
+    html,
+    body, 
+    #viewDivPapa {
+    padding: 0;
+    margin: 0;
+    height: 100%;
+    width: 100%;
+        
+  }
+    
+    #viewDivLeft {
+    padding: 0;
+    margin: 0;
+    height: 100%;
+    width: 50%;  
+          
+  }
+     #viewDivRight {
+    padding: 0;
+    margin-left: 50%;
+    height: 100%;
+    width: 49%;
+    position: absolute;
+    top: 136px;
+    border-left: 30px;
+    
+  }
+
+    
+    #buttonDiv {
+      width: 100%;
+        background-color: aqua;
+        padding: 20px;
+    }
+    
+      #colleft {
+    margin-left: 2%;
+          margin-top: 0;
+          
+    }
+    
+    #colright {
+    margin-left: 15%;
+        margin-top: -60px;
+    
+    }
+    
+    #LeftMapYr {
+        position: absolute;
+        top:140px;
+        left: 15%;
+        padding: 5px;
+         z-index: 1;
+    }
+    
+    #RightMapYr {
+        position: absolute;
+        top: 140px;
+        left: 65%;
+        padding: 5px;
+          z-index: 1;    
+          }
+    
+    
+            
+    
+</style>
+
+<link rel="stylesheet" href="https://js.arcgis.com/4.11/esri/css/main.css">
+<script src="https://js.arcgis.com/4.11/"></script>
+    
+<script>
+  require(["esri/Map",
+           "esri/Basemap",
+           "esri/views/MapView",
+           "esri/layers/FeatureLayer",
+           "esri/symbols/SimpleFillSymbol",
+           "esri/renderers/SimpleRenderer",
+           "esri/renderers/visualVariables/SizeVariable",
+           "esri/symbols/SimpleLineSymbol",
+           "esri/symbols/SimpleMarkerSymbol",
+           "esri/layers/CSVLayer",
+           "esri/widgets/LayerList",
+           "esri/widgets/BasemapGallery",
+           "esri/widgets/Legend",
+           "esri/layers/support/LabelClass",
+           "esri/core/watchUtils",
+           "dojo/domReady!" ],
+          function(Map,Basemap,MapView,FeatureLayer,SimpleFillSymbol,SimpleRenderer,SizeVariable,SimpleLineSymbol,SimpleMarkerSymbol,CSVLayer,LayerList,BasemapGallery,Legend,LabelClass,watchUtils)
+    {  
+      
+      var mymapleft = new Map({
+            basemap:"topo",
+        });
+      
+      //var myBasemap = new Basemap ({
+          //url: "https://services.arcgisonline.com/arcgis/rest/services/World_Terrain_Base/MapServer/0"
+            //});
+      
+      var mymapright = new Map({
+            basemap:"topo",
+            //basemap:myBasemap,
+        });
+      
+      // Why can't I make this work?
+      //var myBasemap = new FeatureLayer ({
+          //url: "https://services.arcgisonline.com/arcgis/rest/services/USA_Topo_Maps/MapServer/0"
+            //});
+
+      //mymapleft.add(myBasemap);
+      /*
+      * Question: How to set the zoom to just what I want - can't get there
+      */
+      
+      var myviewleft = new MapView({
+          map: mymapleft,
+          container: "viewDivLeft",   // DOM node reference
+          center:[-82,39.4],
+          scale: 1200000,
+          
+        //zoom: 9,
+        //extent:{
+         //xmin: -80.69,
+         //ymin: 38.36,
+         //xmax: -83.25,
+         //ymax: 40.06}
+         //xmin: -83.15,
+         //ymin: 38.28,
+         //xmax: -80.43,
+         //ymax: 40.08}
+        });
+      
+      var myviewright = new MapView({
+          map: mymapright,
+          container: "viewDivRight",   // DOM node reference
+          center:[-82,39.4],
+          scale: 1200000,
+        });
+      
+      /*************************************************************
+      // Layer Control widget
+      var layerListLeft = new LayerList({
+          view: myviewleft,
+      });
+      
+      myviewleft.ui.add(layerListLeft, {position: "bottom-left"});
+      
+      var layerListRight = new LayerList({
+          view: myviewright,
+      });
+      
+      myviewright.ui.add(layerListRight, {position: "bottom-left"});
+      **************************************************************/
+    
+      
+      
+      
+      function createSymbol(color){
+          return {
+              type: "simple-fill",
+              color: color,
+              outline: {
+                  width: 0.5,
+                  color: [255, 255, 255, 0.4],
+              },
+              style: "solid",
+          }
+      }; // end of function
+      
+      
+      
+      /*
+       * Add the layers to both Left and Right maps.
+       * The visibility will be controlled via Radio buttons selected by the user
+       * NOTE: With the design that the Left map can only show attributes for the
+       * years 1950 and 1970, it is not necessary to add the layers for 1990 to the
+       * Left map.  Similarly, since the Right map can only show attributes for the
+       * years 1970 and 1990, it is not necessary to add the layers for 1950 to the
+       * Right map.  I'm adding all the layers to make it easier to change that design
+       * if desired.  i.e. both Left and Right could be made to show all three years
+       * without having to revisit this layer adding code.
+       */
+      
+      /*******************************************************************
+      * Population Density - Create Renderer, Create Layers and add to maps
+      *******************************************************************/
+      
+      /*
+      * Population Density Renderer - Choropleth
+      */
+      
+      var renderer_Popden_chor = {
+          type: "class-breaks",
+          //field: "POP100",
+          //normalizationType: "percent-of-total",
+          //normalizationTotal: 37253956,
+          classBreakInfos: [
+              {
+                  minValue: 22,
+                  maxValue: 33.99,
+                  //symbol: createSymbol("#fef0d9"),
+                  symbol: createSymbol("#ffffcc"),
+                  label: "22 - 34",
+              },
+              {
+                  minValue: 34,
+                  maxValue: 54.99,
+                  //symbol: createSymbol("#fdcc8a"),
+                  symbol: createSymbol("#a1dab4"),
+                  label: "34 - 55",
+              },
+              {
+                  minValue: 55,
+                  maxValue: 70.99,
+                  //symbol: createSymbol("#fc8d59"),
+                  symbol: createSymbol("#41b6c4"),
+                  label: "55 - 71",
+              },
+              {
+                  minValue: 71,
+                  maxValue: 102.99,
+                  //symbol: createSymbol("#e34a33"),
+                  symbol: createSymbol("#2c7fb8"),
+                  label: "71 - 103",
+              },
+              {
+                  minValue: 103,
+                  maxValue: 1802,
+                  //symbol: createSymbol("#b30000"),
+                  symbol: createSymbol("#253494"),
+                  label: "103 - 1802",
+              },
+          ]
+      };
+      
+      /*
+      *     Add PopDen50 to left
+      */
+      
+      var PopDen50Left = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+          title: "Population Density 1950",
+          renderer: renderer_Popden_chor,
+          visible: false,
+      });
+      
+      PopDen50Left.renderer.field="PopDen50";
+      mymapleft.add(PopDen50Left);
+      
+            
+      /*
+      *     Add PopDen50 to right
+      */
+      
+      var PopDen50Right = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+          title: "Population Density 1950",
+          renderer: renderer_Popden_chor,
+          visible: false,
+      });
+     
+      PopDen50Right.renderer.field="PopDen50";
+      mymapright.add(PopDen50Right);
+      
+      /*
+      *     Add PopDen70 to left
+      */
+      
+      var PopDen70Left = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+          title: "Population Density 1970",
+          renderer: renderer_Popden_chor,
+          visible: false,
+      });
+      
+      PopDen70Left.renderer.field="PopDen70";
+      mymapleft.add(PopDen70Left);
+      
+            
+      /*
+      *     Add PopDen70 to right
+      */
+      
+      var PopDen70Right = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+          title: "Population Density 1970",
+          renderer: renderer_Popden_chor,
+          visible: false,
+      });
+     
+      PopDen70Right.renderer.field="PopDen70";
+      mymapright.add(PopDen70Right);
+      
+      /*
+      *     Add PopDen90 to left
+      */
+      
+      var PopDen90Left = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+          title: "Population Density 1990",
+          renderer: renderer_Popden_chor,
+          visible: false,
+      });
+      
+      PopDen90Left.renderer.field="PopDen90";
+      mymapleft.add(PopDen90Left);
+      
+            
+      /*
+      *     Add PopDen90 to right
+      */
+      
+      var PopDen90Right = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+          title: "Population Density 1990",
+          renderer: renderer_Popden_chor,
+          visible: false,
+      });
+     
+      PopDen90Right.renderer.field="PopDen90";
+      mymapright.add(PopDen90Right);
+      
+      /*******************************************************************
+      * Unemployment - Create Renderer, Create Layers and add to maps
+      *******************************************************************/
+      
+      /*
+       * Unemployment Renderer - Choropleth
+       */
+      
+      var renderer_Unempl_chor = {
+          type: "class-breaks",
+          classBreakInfos: [
+              {
+                  minValue: 2.4,
+                  maxValue: 4.0,
+                  //symbol: createSymbol("#fef0d9"),
+                  symbol: createSymbol("#ffffcc"),
+                  label: "2.4 - 4.0",
+              },
+              {
+                  minValue: 4.1,
+                  maxValue: 5.9,
+                  symbol: createSymbol("#a1dab4"),
+                  label: "4.1 - 5.9",
+              },
+              {
+                  minValue: 6.0,
+                  maxValue: 7.4,
+                  symbol: createSymbol("#41b6c4"),
+                  label: "6.0 - 7.4",
+              },
+              {
+                  minValue: 7.5,
+                  maxValue: 10.4,
+                  symbol: createSymbol("#2c7fb8"),
+                  label: "7.5 - 10.4",
+              },
+              {
+                  minValue: 10.5,
+                  maxValue: 13.5,
+                  symbol: createSymbol("#253494"),
+                  label: "10.5 - 13.5",
+              },
+          ]
+      };
+      /*
+      *     Unemployment Renderer - Graduated Symbols (not currently used)
+      */
+      
+      var renderer_Unempl_GS = {
+        type: "simple",  // autocasts as new SimpleRenderer()
+        symbol: {
+            type: "simple-marker",  // autocasts as new SimpleMarkerSymbol()
+            style: "square",       // circle,square,cross,x,diamond,triangle,path
+            color: [ 255, 0, 0, 0.5 ],
+        },
+          visualVariables: [{type: "size",
+                           legendOptions: {title: "Unemployment rate"},
+                           stops: [
+                                { value: 4.0, size: 8, label: "2.4 - 4.0" },
+                                { value: 4.1, size: 16, label: "4.1 - 5.9" },
+                                { value: 6.0, size: 24, label: "6.0 - 7.4" },
+                                { value: 7.5, size: 32, label: "7.5 - 10.4" },
+                                { value: 10.5, size: 40, label: "10.5 - 13.5" },
+                            ]
+                            }],
+      };
+
+      
+      /*
+      * Add Unempl50 to left
+      */
+      var Unempl50Left = new FeatureLayer({
+          portalItem:{
+              //id: "6385fd14fc79403da38483a3f8f2c178"
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+              title: "Unemployment 1950",
+              renderer: renderer_Unempl_chor,
+              visible: false,
+      });
+      //Unempl50Left.renderer=renderer_Unempl;
+      Unempl50Left.renderer.field="Unempl50";
+      mymapleft.add(Unempl50Left);
+      
+      /*
+      * Add Unempl50 to right
+      */
+      var Unempl50Right = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+              title: "Unemployment 1950",
+              renderer: renderer_Unempl_chor,
+              visible: false,
+      });
+      
+      Unempl50Right.renderer.field="Unempl50";
+      mymapright.add(Unempl50Right);
+      
+      /*
+      * Add Unempl70 to left
+      */
+      var Unempl70Left = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+              title: "Unemployment 1970",
+              renderer: renderer_Unempl_chor,
+              visible: false,
+      });
+      
+      Unempl70Left.renderer.field="Unempl70";
+      mymapleft.add(Unempl70Left);
+      
+      /*
+      * Add Unempl70 to right
+      */
+      var Unempl70Right = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+              title: "Unemployment 1970",
+              renderer: renderer_Unempl_chor,
+              visible: false,
+      });
+      
+      Unempl70Right.renderer.field="Unempl70";
+      mymapright.add(Unempl70Right);
+      
+      /*
+      * Add Unempl90 to left
+      */
+      var Unempl90Left = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+              title: "Unemployment 1990",
+              renderer: renderer_Unempl_chor,
+              visible: false,
+      });
+      
+      Unempl90Left.renderer.field="Unempl90";
+      mymapleft.add(Unempl90Left);
+      
+      /*
+      * Add Unempl90 to right
+      */
+      var Unempl90Right = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+              title: "Unemployment 1990",
+              renderer: renderer_Unempl_chor,
+              visible: false,
+      });
+      
+      Unempl90Right.renderer.field="Unempl90";
+      mymapright.add(Unempl90Right);
+      
+      /*******************************************************************
+      * Miners - Create Renderer, Create Layers and add to maps
+      *******************************************************************/
+      
+      /*
+       * Miners Renderer - Choropleth
+       */
+      
+      var renderer_Miners_chor = {
+          type: "class-breaks",
+          classBreakInfos: [
+              {
+                  minValue: .1,
+                  maxValue: .3,
+                  //symbol: createSymbol("#fef0d9"),
+                  symbol: createSymbol("#ffffcc"),
+                  label: "0.1 - 0.3",
+              },
+              {
+                  minValue: 0.4,
+                  maxValue: 1.3,
+                  symbol: createSymbol("#a1dab4"),
+                  label: "0.4 - 1.3",
+              },
+              {
+                  minValue: 1.4,
+                  maxValue: 4.0,
+                  symbol: createSymbol("#41b6c4"),
+                  label: "1.4 - 4.0",
+              },
+              {
+                  minValue: 4.1,
+                  maxValue: 7.2,
+                  symbol: createSymbol("#2c7fb8"),
+                  label: "4.1 - 7.2",
+              },
+              {
+                  minValue: 7.3,
+                  maxValue: 18.9,
+                  symbol: createSymbol("#253494"),
+                  label: "7.3 - 18.9",
+              },
+          ]
+      };
+      /*
+       * Miners Renderer Graduated Symbols (not currently used)
+       */
+      var renderer_Miners_GS = {
+        type: "simple",  // autocasts as new SimpleRenderer()
+        symbol: {
+            type: "simple-marker",  // autocasts as new SimpleMarkerSymbol()
+            style: "circle",       // circle,square,cross,x,diamond,triangle,path
+            color: [ 0, 0, 255, 0.5 ],
+        },
+        visualVariables: [{type: "size",
+                            legendOptions: {title: "Miners rate"},
+                            stops: [
+                                { value: .1, size: 8, label: ".1 - .3" },
+                                { value: .4, size: 16, label: ".4 - 1.3" },
+                                { value: 1.4, size: 24, label: "1.4 - 4.0" },
+                                { value: 4.1, size: 32, label: "4.1 - 7.2" },
+                                { value: 7.3, size: 40, label: "7.3 - 18.9" },
+                            ]
+                            }],
+      };
+      
+      
+      /*
+      * Add Miners50 to left
+      */
+      var Miners50Left = new FeatureLayer({
+          portalItem:{
+              //id: "84696fa4902e4e93bc8bad8b7fc7f8c0" // Income50 layer from ArcGIS Online
+              id: "0ee0f98fe94d4008878951e8bf4bdafc" 
+          },
+              title: "Miners 1950",
+              renderer: renderer_Miners_chor,
+              visible: false,
+      });
+      
+      Miners50Left.renderer.field="Miners50";
+      mymapleft.add(Miners50Left);
+      
+      /*
+      * Add Miners50 to right
+      */
+      var Miners50Right = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+              title: "Miners 1950",
+              renderer: renderer_Miners_chor,
+              visible: false,
+      });
+      
+      Miners50Right.renderer.field="Miners50";
+      mymapright.add(Miners50Right);
+      
+      /*
+      * Add Miners70 to left
+      */
+      var Miners70Left = new FeatureLayer({
+          portalItem:{
+              //id: "84696fa4902e4e93bc8bad8b7fc7f8c0" // Income70 layer from ArcGIS Online
+              id: "0ee0f98fe94d4008878951e8bf4bdafc" 
+          },
+              title: "Miners 1970",
+              renderer: renderer_Miners_chor,
+              visible: false,
+      });
+      
+      Miners70Left.renderer.field="Miners70";
+      mymapleft.add(Miners70Left);
+      
+      /*
+      * Add Miners70 to right
+      */
+      var Miners70Right = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+              title: "Miners 1970",
+              renderer: renderer_Miners_chor,
+              visible: false,
+      });
+      
+      Miners70Right.renderer.field="Miners70";
+      mymapright.add(Miners70Right);
+      /*
+      * Add Miners90 to left
+      */
+      var Miners90Left = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc" 
+          },
+              title: "Miners 1990",
+              renderer: renderer_Miners_chor,
+              visible: false,
+      });
+      
+      Miners90Left.renderer.field="Miners90";
+      mymapleft.add(Miners90Left);
+      
+      /*
+      * Add Miners90 to right
+      */
+      var Miners90Right = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+              title: "Miners 1990",
+              renderer: renderer_Miners_chor,
+              visible: false,
+      });
+      
+      Miners90Right.renderer.field="Miners90";
+      mymapright.add(Miners90Right);
+      
+      /*******************************************************************
+      * Income - Create Renderer, Create Layers and add to maps
+      *******************************************************************/
+      
+      /*
+       * Income Renderer - Choropleth
+       */
+      
+      var renderer_Income_chor = {
+          type: "class-breaks",
+          classBreakInfos: [
+              {
+                  minValue: 1473,
+                  maxValue: 2314,
+                  //symbol: createSymbol("#fef0d9"),
+                  symbol: createSymbol("#ffffcc"),
+                  label: "$1,473 - $2,314",
+              },
+              {
+                  minValue: 2315,
+                  maxValue: 4037,
+                  symbol: createSymbol("#a1dab4"),
+                  label: "$2,315- $4,037",
+              },
+              {
+                  minValue: 4038,
+                  maxValue: 4550,
+                  symbol: createSymbol("#41b6c4"),
+                  label: "$4,038 - $4,550",
+              },
+              {
+                  minValue: 4551,
+                  maxValue: 4928,
+                  symbol: createSymbol("#2c7fb8"),
+                  label: "$4,551 - $4,928",
+              },
+              {
+                  minValue: 4929,
+                  maxValue: 6864,
+                  symbol: createSymbol("#253494"),
+                  label: "$4,929 - $6,865",
+              },
+          ]
+      };
+      
+     /*
+      *     Income Renderer Graduated Symbols (not currently used)
+      */
+    
+      var renderer_Income_GS = {
+        type: "simple",  // autocasts as new SimpleRenderer()
+        symbol: {
+            type: "simple-marker",  // autocasts as new SimpleMarkerSymbol()
+            style: "diamond",       // circle,square,cross,x,diamond,triangle,path
+            color: [ 0, 255, 0, 0.5 ],
+        },
+        visualVariables: [{type: "size",
+                            legendOptions: {title: "Income in 1950 dollars"},
+                            stops: [
+                                { value: 1685, size: 8, label: "1473 - 1685" },
+                                { value: 1994, size: 16, label: "1686 - 1994" },
+                                { value: 2365, size: 24, label: "1995 - 2365" },
+                                { value: 2876, size: 32, label: "2366 - 2876" },
+                                { value: 6865, size: 40, label: "2877 - 6865" },
+                            ]
+                          }],
+    };
+      
+      /*
+      * Add Income50 to left
+      */
+      var Income50Left = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+              title: "Income 1950",
+              renderer: renderer_Income_chor,
+              visible: false,
+      });
+      
+      Income50Left.renderer.field="Income50";
+      mymapleft.add(Income50Left);
+      
+      /*
+      * Add Income50 to right
+      */
+      var Income50Right = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+              title: "Income 1950",
+              renderer: renderer_Income_chor,
+              visible: false,
+      });
+      
+      Income50Right.renderer.field="Income50";
+      mymapright.add(Income50Right);
+      
+      /*
+      * Add Income70 to left
+      */
+      var Income70Left = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+              title: "Income 1970 (in 1950 dollars)",
+              renderer: renderer_Income_chor,
+              visible: false,
+      });
+      
+      Income70Left.renderer.field="Income70";
+      mymapleft.add(Income70Left);
+      
+      /*
+      * Add Income70 to right
+      */
+      var Income70Right = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+              title: "Income 1970 (in 1950 dollars)",
+              renderer: renderer_Income_chor,
+              visible: false,
+      });
+      
+      Income70Right.renderer.field="Income70";
+      mymapright.add(Income70Right);
+      
+      /*
+      * Add Income90 to left
+      */
+      var Income90Left = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+              title: "Income 1990 (in 1950 dollars)",
+              renderer: renderer_Income_chor,
+              visible: false,
+      });
+      
+      Income90Left.renderer.field="Income90";
+      mymapleft.add(Income90Left);
+      
+      /*
+      * Add Income90 to right
+      */
+      var Income90Right = new FeatureLayer({
+          portalItem:{
+              id: "0ee0f98fe94d4008878951e8bf4bdafc"
+          },
+              title: "Income 1990 (in 1950 dollars)",
+              renderer: renderer_Income_chor,
+              visible: false,
+      });
+      
+      Income90Right.renderer.field="Income90";
+      mymapright.add(Income90Right);
+      
+
+      
+     /*
+      *     Add County Outlines to both maps
+      */
+      var countyLabels = new LabelClass(
+    {
+        labelExpressionInfo: {expression: "$feature.County"},
+        symbol: {type:"text",color:"black",font:{size:6},haloSize: 1,haloColor:"white"},
+    });
+    //console.log(countyLabels.labelExpressionInfo.expression.$feature.County[0]);
+    // how do I get my hands on the colums of attributes in arrays so I can work with the values?
+      
+      var CountyOutlinesLeft = new FeatureLayer({
+          portalItem:{
+              id: "c756af89a1944fd19aeb9322bcafc709"
+          }
+
+      });
+      
+      CountyOutlinesLeft.labelingInfo = [countyLabels];
+      mymapleft.add(CountyOutlinesLeft);
+      
+      var CountyOutlinesRight = new FeatureLayer({
+          portalItem:{
+              id: "c756af89a1944fd19aeb9322bcafc709"
+          }
+
+      });
+      
+      CountyOutlinesRight.labelingInfo = [countyLabels];
+      mymapright.add(CountyOutlinesRight);
+      
+
+    // Add legend - left
+      // Name all my layers so I don't get a legend for county outlines
+      var myLegendLeft = new Legend({
+          view: myviewleft,
+          layerInfos: [
+              {layer:PopDen50Left},
+              {layer:Unempl50Left},
+              {layer:Miners50Left},
+              {layer:Income50Left},
+              {layer:PopDen70Left},
+              {layer:Unempl70Left},
+              {layer:Miners70Left},
+              {layer:Income70Left},
+              {layer:PopDen90Left},
+              {layer:Unempl90Left},
+              {layer:Miners90Left},
+              {layer:Income90Left},
+              {layer:PopDen50Right},
+              {layer:Unempl50Right},
+              {layer:Miners50Right},
+              {layer:Income50Right},
+              {layer:PopDen70Right},
+              {layer:Unempl70Right},
+              {layer:Miners70Right},
+              {layer:Income70Right},
+              {layer:PopDen90Right},
+              {layer:Unempl90Right},
+              {layer:Miners90Right},
+              {layer:Income90Right},
+          ],
+      });
+      
+      myviewleft.ui.add(myLegendLeft,"bottom-right");  
+
+    // Add legend - right
+      var myLegendRight = new Legend({
+          view: myviewright,
+          layerInfos: [
+              {layer:PopDen50Left},
+              {layer:Unempl50Left},
+              {layer:Miners50Left},
+              {layer:Income50Left},
+              {layer:PopDen70Left},
+              {layer:Unempl70Left},
+              {layer:Miners70Left},
+              {layer:Income70Left},
+              {layer:PopDen90Left},
+              {layer:Unempl90Left},
+              {layer:Miners90Left},
+              {layer:Income90Left},
+              {layer:PopDen50Right},
+              {layer:Unempl50Right},
+              {layer:Miners50Right},
+              {layer:Income50Right},
+              {layer:PopDen70Right},
+              {layer:Unempl70Right},
+              {layer:Miners70Right},
+              {layer:Income70Right},
+              {layer:PopDen90Right},
+              {layer:Unempl90Right},
+              {layer:Miners90Right},
+              {layer:Income90Right},
+          ],
+      });
+      
+      myviewright.ui.add(myLegendRight,"bottom-right");  
+     
+      /*******************************************************************
+      * User interactivity section
+      *******************************************************************/
+      
+      /*
+       * Add UpdateDisplay() as callback function to all buttons
+       */
+      
+      document.getElementById("period50_70").addEventListener("click", UpdateDisplay);
+      document.getElementById("period70_90").addEventListener("click", UpdateDisplay);
+      document.getElementById("popden").addEventListener("click", UpdateDisplay);
+      document.getElementById("unempl").addEventListener("click", UpdateDisplay);
+      document.getElementById("miners").addEventListener("click", UpdateDisplay);
+      document.getElementById("income").addEventListener("click", UpdateDisplay);
+        
+
+      // Remove this given above design
+      //document.getElementById("RefreshButton").addEventListener("click", UpdateDisplay);
+       
+      function ClearAllVisible(){
+          console.log("In ClearAllVisible");
+          PopDen50Left.visible = false;
+          Unempl50Left.visible = false;
+          Miners50Left.visible = false;
+          Income50Left.visible = false;
+          PopDen70Left.visible = false;
+          Unempl70Left.visible = false;
+          Miners70Left.visible = false;
+          Income70Left.visible = false;
+          PopDen90Left.visible = false;
+          Unempl90Left.visible = false;
+          Miners90Left.visible = false;
+          Income90Left.visible = false;
+          
+          PopDen50Right.visible = false;
+          Unempl50Right.visible = false;
+          Miners50Right.visible = false;
+          Income50Right.visible = false;
+          PopDen70Right.visible = false;
+          Unempl70Right.visible = false;
+          Miners70Right.visible = false;
+          Income70Right.visible = false;
+          PopDen90Right.visible = false;
+          Unempl90Right.visible = false;
+          Miners90Right.visible = false;
+          Income90Right.visible = false;
+          }
+      
+      function UpdateDisplay(){
+          console.log("In UpdateDisplay");
+          
+          ClearAllVisible();
+          
+          /*
+           * Process Left map
+           */
+          if (document.getElementById("period50_70").checked) {
+              // The year for the Left map is 1950
+              document.getElementById('LeftMapYear').value="Year: 1950";
+              console.log("left map year is 1950");
+              if (document.getElementById("popden").checked)
+              {
+                  PopDen50Left.visible = true;
+              }
+              if (document.getElementById("unempl").checked)
+              {
+                  Unempl50Left.visible = true;
+              }
+              if (document.getElementById("miners").checked)
+              {
+                  Miners50Left.visible = true;
+              }
+              if (document.getElementById("income").checked)
+              {
+                  Income50Left.visible = true;
+              }
+          }
+          else if (document.getElementById("period70_90").checked) {
+              // The year for the Left map is 1970
+              document.getElementById('LeftMapYear').value="Year: 1970";
+              console.log("left map year is 1970");
+              if (document.getElementById("popden").checked)
+              {
+                  PopDen70Left.visible = true;
+              }
+              if (document.getElementById("unempl").checked)
+              {
+                  Unempl70Left.visible = true;
+              }
+              if (document.getElementById("miners").checked)
+              {
+                  Miners70Left.visible = true;
+              }
+              if (document.getElementById("income").checked)
+              {
+                  Income70Left.visible = true;
+              }
+          }
+          else {
+              // This should not happen
+              console.log("ERROR - neither Period radio button is selected")
+          }
+          
+          /*
+           * Process Right map
+           */
+          if (document.getElementById("period50_70").checked) {
+              // The year for the right map is 1970
+              document.getElementById('RightMapYear').value="Year: 1970";
+              console.log("right map year is 1970");
+              if (document.getElementById("popden").checked)
+              {
+                  PopDen70Right.visible = true;
+              }
+              if (document.getElementById("unempl").checked)
+              {
+                  Unempl70Right.visible = true;
+              }
+              if (document.getElementById("miners").checked)
+              {
+                  Miners70Right.visible = true;
+              }
+              if (document.getElementById("income").checked)
+              {
+                  Income70Right.visible = true;
+              }
+          }
+          else if (document.getElementById("period70_90").checked) {
+              // The year for the right map is 1990
+              document.getElementById('RightMapYear').value="Year: 1990";
+              console.log("right map year is 1990");
+              if (document.getElementById("popden").checked)
+              {
+                  PopDen90Right.visible = true;
+              }
+              if (document.getElementById("unempl").checked)
+              {
+                  Unempl90Right.visible = true;
+              }
+              if (document.getElementById("miners").checked)
+              {
+                  Miners90Right.visible = true;
+              }
+              if (document.getElementById("income").checked)
+              {
+                  Income90Right.visible = true;
+              }
+          }
+          else {
+              // This should not happen
+              console.log("ERROR - neither Period radio button is selected")
+          }
+     } // End of function UpdateDisplay()
+    
+/************************************************************************
+* Start of Synchronize Views code
+************************************************************************/
+      
+    function synchronizeView(view,others){
+    others=Array.isArray(others) ? others: [others];
+    
+    var viewpointWatchHandle;
+    var viewStationaryHandle;
+    var otherInteractHandlers;
+    var scheduleId;
+        
+    //var clear=function(){
+    function clear(){
+        if (otherInteractHandlers)
+            {
+                otherInteractHandlers.forEach(function(handle){
+                    handle.remove();
+                });
+            }
+        
+        viewpointWatchHandle && viewpointWatchHandle.remove();
+        viewStationaryHandle && viewStationaryHandle.remove();
+        scheduleId && clearTimeout(scheduleId);
+        otherInteractHandlers = viewpointWatchHandle=viewStationaryHandle=scheduleId=null;
+    };
+        
+    function ViewWatchCallback(newValue){
+        if(!newValue)
+            {
+                return;
+            }
+        if(viewpointWatchHandle || scheduleId)
+            {
+                return;
+            }
+        scheduleId=setTimeout(function(){
+            scheduleId=null;
+            viewpointWatchHandle=view.watch('viewpoint',function(newValue){
+                others.forEach(function(otherView){
+                    otherView.viewpoint=newValue;
+                });
+            });
+        },0);
+        
+        otherInteractHandlers = others.map(function(otherView){
+            return watchUtils.watch(otherView,
+                    'interacting,animation',
+                    function(value){
+                        if (value)
+                            {
+                                clear();
+                            }
+            });
+        });
+    viewStationaryHandle = watchUtils.whenTrue(view,'stationary',clear);
+    }; // End of ViewWatchCallback
+        
+    var interactWatcher = view.watch('interacting,animation',ViewWatchCallback);
+                                     
+    return{
+        remove: function() {
+            this.remove = function() {};
+            clear();
+            interactWatcher.remove();
+        }
+    }
+    }; // End of function synchronizeView
+       
+    // Synchronize two views
+    var synchronizeViews = function(views) {
+        var handles = views.map(function(view,idx,views) {
+            var others = views.concat();
+            others.splice(idx,1);
+            return synchronizeView(view,others);
+        });
+        
+        return {
+            remove: function(){
+                this.remove = function(){};
+                handles.forEach(function(h) {
+                    h.remove();
+                });
+                handles = null;
+            }
+        }
+    }
+    
+    synchronizeViews([myviewleft,myviewright]);
+      
+/************************************************************************
+* End of Synchronize Views code
+************************************************************************/      
+      
+});
+</script>
+    
+</head>
+
+<body>  
+<div id="viewDivPapa">
+    
+    
+     <div id="buttonDiv">
+    <div id="colleft">
+          
+               
+               Choose time period:
+    <div>
+        <input type="radio" name="Period" checked="checked" id="period50_70" />
+        <label for="period50_70">Period 1950 to 1970</label>
+    </div>
+    
+    <div>
+        <input type="radio" name="Period" id="period70_90" />
+        <label for="period70_90">Period 1970 to 1990</label>
+    </div>
+   </div>
+         <div id="colright">
+      Attibute to show:
+    <div>
+        <input type="radio" name="Attribute"  value="popden" id="popden" />
+        <label for="popden">Pop Density</label>
+    </div>
+    
+    <div>
+        <input type="radio" name="Attribute" value="unempl" id="unempl" />
+        <label for="unempl">Unemployment Rate</label>
+    </div>
+        
+    <div>
+        <input type="radio" name="Attribute" value="miners" id="miners" />
+        <label for="miners">Miners percent</label>
+    </div>
+        
+    <div>
+        <input type="radio" name="Attribute" value="income" id="income" />
+        <label for="income">Median Income</label>
+    </div>
+           
+         </div></div>
+    
+    <!--MAPS-->
+    <div id="LeftMapYr">
+            <input type="text" id="LeftMapYear" value="Year: 1950" size=8>
+    </div>
+    
+    <div id="RightMapYr">
+        <input type="text" id="RightMapYear" value="Year: 1970" size=8>
+    </div>
+     
+   <div id="viewDivLeft"> </div>
+    <div id="viewDivRight"> </div>
+    <!--END MAPS-->
+</div>
+   
+    
+    
+
+</body>
+</html>
